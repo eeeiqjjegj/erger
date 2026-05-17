@@ -7,5 +7,5 @@ Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.VehicleCamera.VehicleCa
 Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.ZoomController
 Players.<PLAYER>.PlayerScripts.PlayerModule.CommonUtils.FlagUtil
 Players.<PLAYER>.PlayerScripts.PlayerModule.ControlModule.BaseCharacterController
-Players.<PLAYER>.PlayerScripts.PlayerScriptsLoader
-  ]
+Players.<PLAYER>.PlayerScripts.PlayerScriptsLoader 
+]
