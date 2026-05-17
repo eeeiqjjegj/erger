@@ -1,0 +1,155 @@
+import discord
+import asyncio
+import os
+import re
+import aiohttp
+from datetime import datetime, timezone, timedelta
+
+TOKEN = os.environ.get("DISCORD_BOT_TOKEN")
+
+CHANNEL_ID = 1501699534131171450
+MINUTES_BACK = 48 * 60
+OUTPUT_FILE = "decompiled_all.txt"
+CONCURRENT_DOWNLOADS = 20   # download N attachments at once instead of 1-by-1
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+client = discord.Client(intents=intents)
+
+
+@client.event
+async def on_ready():
+    print(f"Logged in as {client.user} ({client.user.id})")
+    await fetch_and_save()
+
+
+async def download_text(session, url):
+    try:
+        async with session.get(url) as resp:
+            if resp.status == 200:
+                return await resp.text(encoding="utf-8", errors="replace")
+            else:
+                return f"[Download failed: HTTP {resp.status}]"
+    except Exception as e:
+        return f"[Download error: {e}]"
+
+
+def extract_paths(text):
+    paths = re.findall(r"=====\s+(.+?)\s+=====", text)
+    return paths
+
+
+async def process_message(session, msg, guild_id, channel_id):
+    """Download all .txt attachments for one message, return formatted lines."""
+    results = []
+    tasks = [
+        (att, download_text(session, att.url))
+        for att in msg.attachments
+        if att.filename.endswith(".txt")
+    ]
+    if not tasks:
+        return results
+
+    contents = await asyncio.gather(*[t[1] for t in tasks])
+
+    for (att, _), content in zip(tasks, contents):
+        paths = extract_paths(content)
+        block = []
+        block.append("=" * 80)
+        block.append(f"FILE: {att.filename}")
+        block.append(f"MESSAGE ID: {msg.id}")
+        block.append(f"TIMESTAMP: {msg.created_at.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        block.append(f"JUMP URL: https://discord.com/channels/{guild_id}/{channel_id}/{msg.id}")
+        block.append("=" * 80)
+        if paths:
+            block.append("")
+            block.append(f"--- PATHS FOUND ({len(paths)}) ---")
+            for p in paths:
+                block.append(p)
+            block.append("")
+        block.append("--- FULL CONTENT ---")
+        block.append(content)
+        block.append("")
+        results.append("\n".join(block))
+
+    return results
+
+
+async def fetch_and_save():
+    channel = client.get_channel(CHANNEL_ID)
+    if channel is None:
+        try:
+            channel = await client.fetch_channel(CHANNEL_ID)
+        except Exception as e:
+            print(f"ERROR: Could not fetch channel: {e}")
+            await client.close()
+            return
+
+    print(f"Channel: #{channel.name} | Guild: {channel.guild.name}")
+
+    cutoff_time = datetime.now(timezone.utc) - timedelta(minutes=MINUTES_BACK)
+    print(f"Fetching messages after: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+
+    messages = []
+    async for msg in channel.history(limit=None, after=cutoff_time, oldest_first=True):
+        messages.append(msg)
+
+    total = len(messages)
+    print(f"Found {total} message(s). Downloading {CONCURRENT_DOWNLOADS} at a time...")
+
+    header_lines = [
+        "=" * 80,
+        "DECOMPILED ALL",
+        "=" * 80,
+        f"Export Time : {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}",
+        f"Guild       : {channel.guild.name} (ID: {channel.guild.id})",
+        f"Channel     : #{channel.name} (ID: {channel.id})",
+        f"Path        : {channel.guild.name} / {channel.category.name if channel.category else 'No Category'} / #{channel.name}",
+        f"Time Range  : Last {MINUTES_BACK} minutes (48h)",
+        f"Total Msgs  : {total}",
+        "=" * 80,
+        "",
+    ]
+
+    # Open file immediately and write header — so partial data is saved even if interrupted
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        f.write("\n".join(header_lines))
+        f.write("\n")
+
+        async with aiohttp.ClientSession() as session:
+            # Process messages in batches of CONCURRENT_DOWNLOADS
+            for batch_start in range(0, total, CONCURRENT_DOWNLOADS):
+                batch = messages[batch_start:batch_start + CONCURRENT_DOWNLOADS]
+                batch_end = min(batch_start + CONCURRENT_DOWNLOADS, total)
+                print(f"  Batch {batch_start+1}-{batch_end}/{total}...")
+
+                batch_results = await asyncio.gather(*[
+                    process_message(session, msg, channel.guild.id, channel.id)
+                    for msg in batch
+                ])
+
+                for msg_blocks in batch_results:
+                    for block in msg_blocks:
+                        f.write(block)
+                        f.write("\n")
+
+                # Flush to disk after every batch so partial output is usable
+                f.flush()
+
+        f.write("=" * 80 + "\n")
+        f.write("END OF EXPORT\n")
+        f.write("=" * 80 + "\n")
+
+    size = os.path.getsize(OUTPUT_FILE)
+    print(f"\nDone. Saved to: {OUTPUT_FILE}")
+    print(f"File size: {size:,} bytes ({size / 1024 / 1024:.1f} MB)")
+
+    await client.close()
+
+
+if __name__ == "__main__":
+    if not TOKEN:
+        print("ERROR: DISCORD_BOT_TOKEN is not set.")
+    else:
+        client.run(TOKEN)
