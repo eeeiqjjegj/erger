@@ -1,11 +1,11 @@
 [
-Players.<PLAYER>.PlayerScripts.OpenTextChatService.Modules.AutoComplete
-Players.<PLAYER>.PlayerScripts.PlayerModule
-Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.BaseOcclusion
-Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.CameraToggleStateController
-Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.VehicleCamera.VehicleCameraConfig
-Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.ZoomController
-Players.<PLAYER>.PlayerScripts.PlayerModule.CommonUtils.FlagUtil
-Players.<PLAYER>.PlayerScripts.PlayerModule.ControlModule.BaseCharacterController
-Players.<PLAYER>.PlayerScripts.PlayerScriptsLoader 
+  "Players.<PLAYER>.PlayerScripts.OpenTextChatService.Modules.AutoComplete",
+  "Players.<PLAYER>.PlayerScripts.PlayerModule",
+  "Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.BaseOcclusion",
+  "Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.CameraToggleStateController",
+  "Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.VehicleCamera.VehicleCameraConfig",
+  "Players.<PLAYER>.PlayerScripts.PlayerModule.CameraModule.ZoomController",
+  "Players.<PLAYER>.PlayerScripts.PlayerModule.CommonUtils.FlagUtil",
+  "Players.<PLAYER>.PlayerScripts.PlayerModule.ControlModule.BaseCharacterController",
+  "Players.<PLAYER>.PlayerScripts.PlayerScriptsLoader"
 ]
